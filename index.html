@@ -1447,16 +1447,16 @@
       // -----------------------------------------------------------------------
       // 2. TOAST & PARTICLE BURST HELPERS
       // -----------------------------------------------------------------------
-      function showToast(title, subtitle) {
+      function showToast(title, subtitle = '') {
         const container = document.getElementById('toastContainer');
         if (!container) return;
         const item = document.createElement('div');
-        item.className = 'pointer-events-auto bg-rose-950 text-amber-50 border border-amber-400/70 rounded-xl px-4 py-3 shadow-xl flex items-start gap-3 transition-all duration-300';
+        item.className = 'pointer-events-auto bg-rose-950 text-amber-50 border border-amber-400/70 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3 transition-all duration-300';
         item.innerHTML = `
           <span class="text-xl">🌸</span>
           <div class="text-xs">
             <p class="font-bold text-amber-300">${title}</p>
-            <p class="text-amber-100/90 mt-0.5">${subtitle}</p>
+            ${subtitle ? `<p class="text-amber-100/90 mt-0.5">${subtitle}</p>` : ''}
           </div>
         `;
         container.appendChild(item);
@@ -2190,7 +2190,7 @@
           if (statFlowersEl) statFlowersEl.textContent = flowerCount.toLocaleString('vi-VN');
           saveAndBroadcastDbState('offer_flower');
           spawnFlowerBurst(e.clientX, e.clientY);
-          showToast('Đã dâng 1 đóa hoa tri ân!', `Tổng cộng ${flowerCount.toLocaleString('vi-VN')} đóa hoa đã được lưu realtime trên Server.`);
+          showToast(`Đã tặng ${flowerCount.toLocaleString('vi-VN')} bông hoa cho thầy cô!`);
         }
 
         document.getElementById('btnOfferFlowerHeader')?.addEventListener('click', handleOfferFlower);
