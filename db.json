@@ -1,0 +1,87 @@
+{
+  "version": "2.0.0",
+  "project": "Báo Tường Điện Tử 20/11 - Ngọn Lửa Tri Ân",
+  "flowerCount": 129,
+  "editorialLikes": 129,
+  "workLikes": {
+    "w1": 129,
+    "w2": 129,
+    "w3": 129
+  },
+  "baseWishes": [
+    {
+      "id": "base_1",
+      "sender": "Tập thể Tổ 1",
+      "recipient": "Cô Giáo Chủ Nhiệm",
+      "symbol": "📚",
+      "message": "Kính chúc Cô luôn giữ mãi nụ cười rạng rỡ và ngọn lửa yêu nghề. Cảm ơn Cô đã luôn là người mẹ hiền thứ hai của tập thể lớp!",
+      "x": 350,
+      "y": 95
+    },
+    {
+      "id": "base_2",
+      "sender": "Nhóm Học Sinh Tổ 2",
+      "recipient": "Quý Thầy Cô Tổ Toán - Tin",
+      "symbol": "🌻",
+      "message": "Cảm ơn Thầy Cô đã dạy chúng em tư duy logic, sự kiên trì trước mỗi bài toán khó và cách ứng dụng công nghệ sáng tạo!",
+      "x": 245,
+      "y": 145
+    },
+    {
+      "id": "base_3",
+      "sender": "Nhóm Học Sinh Tổ 3",
+      "recipient": "Quý Thầy Cô Tổ Ngữ Văn - Sử - Địa",
+      "symbol": "🌹",
+      "message": "Nhờ những bài giảng đầy cảm xúc của Thầy Cô, chúng em thêm yêu tiếng Việt, tự hào về lịch sử và biết sống nhân ái hơn mỗi ngày.",
+      "x": 455,
+      "y": 140
+    },
+    {
+      "id": "base_4",
+      "sender": "Nhóm Học Sinh Tổ 4",
+      "recipient": "Quý Thầy Cô Tổ Tự Nhiên",
+      "symbol": "🏮",
+      "message": "Chúc Quý Thầy Cô ngày 20/11 ngập tràn niềm vui! Những tiết thực hành thí nghiệm của Thầy Cô luôn là kỷ niệm tuyệt vời nhất.",
+      "x": 185,
+      "y": 205
+    },
+    {
+      "id": "base_5",
+      "sender": "Ban Cán Sự Lớp",
+      "recipient": "Ban Giám Hiệu & Hội Đồng Sư Phạm",
+      "symbol": "💐",
+      "message": "Kính chúc Ban Giám Hiệu và toàn thể Quý Thầy Cô sức khỏe dồi dào, tiếp tục chèo lái con thuyền giáo dục của trường đạt nhiều thành tựu mới!",
+      "x": 515,
+      "y": 200
+    },
+    {
+      "id": "base_6",
+      "sender": "Bút danh: Học Trò Nhỏ",
+      "recipient": "Thầy Cô Tổ Ngoại Ngữ & Nghệ Thuật",
+      "symbol": "📚",
+      "message": "Cảm ơn Thầy Cô đã mở ra cánh cửa hội nhập quốc tế và nuôi dưỡng tâm hồn nghệ thuật trong sáng cho chúng em.",
+      "x": 295,
+      "y": 185
+    },
+    {
+      "id": "base_7",
+      "sender": "Đoàn Viên Chi Đoàn",
+      "recipient": "Thầy Cô Công Tác Đoàn & Thể Chất",
+      "symbol": "🌻",
+      "message": "Kính chúc Thầy Cô luôn tràn đầy năng lượng, nhiệt huyết và đồng hành cùng tuổi trẻ học đường trong mọi phong trào!",
+      "x": 410,
+      "y": 185
+    },
+    {
+      "id": "base_8",
+      "sender": "Tập Thể Lớp 12A3",
+      "recipient": "Tất Cả Quý Thầy Cô Đáng Kính",
+      "symbol": "🌹",
+      "message": "Ngàn lời tri ân chân thành nhất xin gửi tới những Người Lái Đò thầm lặng nhân dịp 20/11!",
+      "x": 350,
+      "y": 150
+    }
+  ],
+  "customWishes": [],
+  "updatedAt": "2026-11-09T22:33:00+07:00"
+}

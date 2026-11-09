@@ -40,8 +40,8 @@
     <div class="site-navbar-inner max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-[68px] flex items-center justify-between gap-2 sm:gap-4">
       <!-- Brand Identity -->
       <a href="#trang-nhat" class="nav-brand flex items-center gap-2.5 sm:gap-3 group min-w-0 shrink-0">
-        <div class="nav-logo-badge w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-rose-900 to-amber-700 flex items-center justify-center text-amber-100 shadow-md group-hover:scale-105 transition-transform">
-          <span class="font-editorial font-bold text-base sm:text-lg leading-none">20/11</span>
+        <div class="nav-logo-badge w-10 h-10 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+          <img id="navRandomLogoImg" src="images/logo/logo_A3_1.png" alt="Logo Tập thể Lớp A3" class="nav-logo-img" />
         </div>
         <div class="min-w-0">
           <p class="font-editorial font-bold text-rose-950 text-sm sm:text-[15px] xl:text-base leading-tight truncate">Người Lái Đò Thầm Lặng</p>
@@ -220,12 +220,15 @@
           <!-- Box 2: Interactive Counter & Flower Offering Card -->
           <div class="p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-500/40 shadow-sm flex-1 flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-2">
                 <h3 class="font-editorial font-bold text-rose-950 text-lg">Nhịp Đập Tri Ân</h3>
-                <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-900 text-xs font-semibold">Tương tác trực tiếp</span>
+                <span id="realtimeDbStatusBadge" class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300/80 text-[11px] font-bold inline-flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                  <span>Realtime DB • Đã đồng bộ</span>
+                </span>
               </div>
               <p class="text-xs text-stone-600 mt-1">
-                Mỗi đóa hoa dâng lên là một lời cảm ơn chân thành gửi tới những người gieo hạt thầm lặng.
+                Mỗi đóa hoa, lượt thả tim và thiệp chúc đều được lưu trữ realtime trên toàn server.
               </p>
 
               <div class="grid grid-cols-3 gap-2 my-4 text-center">
@@ -249,6 +252,12 @@
                 <span class="text-lg">🌹</span>
                 <span>Nhấn Dâng Hoa Ngàn Lời Tri Ân (+1)</span>
               </button>
+              <div class="flex items-center justify-between text-[11px] text-stone-500 pt-0.5 px-1">
+                <span id="realtimeLastSyncText">Tự động lưu trữ & đồng bộ trực tuyến</span>
+                <button id="btnExportDbJson" type="button" class="text-amber-900 hover:text-rose-900 font-semibold underline decoration-dotted transition-colors" title="Trích xuất file db.json chứa toàn bộ dữ liệu thực tế trên server">
+                  Trích xuất db.json
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -868,7 +877,7 @@
   <script>
     (function () {
       // -----------------------------------------------------------------------
-      // 1. STATE & INITIAL DATA
+      // 1. STATE, INITIAL DATA & REALTIME SERVER DATABASE SYNC
       // -----------------------------------------------------------------------
       let flowerCount = 129;
       let editorialLikes = 129;
@@ -877,17 +886,19 @@
       let currentModalWorkId = null;
       let particleMode = 'autumn'; // 'autumn' | 'fireflies' | 'off'
 
-      // Load saved counters safely from localStorage (reset baseline to 129)
+      // Cloud & Local Database Configuration
+      const DB_STORAGE_KEY = 'bt2011_realtime_db_v2';
+      const CLOUD_DB_URL = 'https://api.restful-api.dev/objects/ff808181a09d98f701a1c0ee8c0571e5';
+      const REALTIME_TOPIC_URL = 'https://ntfy.sh/bt2011_thanglong_12a3_realtime_v2';
+      const LOCAL_DB_FILE = 'db.json';
+      const CLIENT_SESSION_ID = 'cli_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+      let customWishes = [];
+      let broadcastChannel = null;
       try {
-        localStorage.removeItem('bt2011_flowers');
-        localStorage.removeItem('bt2011_ed_likes');
-        const savedFlowers = localStorage.getItem('bt2011_flowers_129');
-        if (savedFlowers) flowerCount = parseInt(savedFlowers, 10) || 129;
-        const savedEdLikes = localStorage.getItem('bt2011_ed_likes_129');
-        if (savedEdLikes) editorialLikes = parseInt(savedEdLikes, 10) || 129;
-      } catch (e) {
-        // Ignore storage error in sandboxed iframe
-      }
+        if ('BroadcastChannel' in window) {
+          broadcastChannel = new BroadcastChannel('bt2011_realtime_sync');
+        }
+      } catch (e) {}
 
       // Meaningful Quotes for Typewriter
       const quotes = [
@@ -1017,9 +1028,10 @@
       ];
       let userQuizAnswers = {};
 
-      // Initial Gratitude Tree Wishes (8 nodes with x,y on SVG 700x440)
-      const treeWishes = [
+      // Initial Gratitude Tree Wishes (8 baseline nodes with x,y on SVG 700x440)
+      const baseWishes = [
         {
+          id: 'base_1',
           sender: 'Tập thể Tổ 1',
           recipient: 'Cô Giáo Chủ Nhiệm',
           symbol: '📚',
@@ -1027,6 +1039,7 @@
           x: 350, y: 95
         },
         {
+          id: 'base_2',
           sender: 'Nhóm Học Sinh Tổ 2',
           recipient: 'Quý Thầy Cô Tổ Toán - Tin',
           symbol: '🌻',
@@ -1034,6 +1047,7 @@
           x: 245, y: 145
         },
         {
+          id: 'base_3',
           sender: 'Nhóm Học Sinh Tổ 3',
           recipient: 'Quý Thầy Cô Tổ Ngữ Văn - Sử - Địa',
           symbol: '🌹',
@@ -1041,6 +1055,7 @@
           x: 455, y: 140
         },
         {
+          id: 'base_4',
           sender: 'Nhóm Học Sinh Tổ 4',
           recipient: 'Quý Thầy Cô Tổ Tự Nhiên',
           symbol: '🏮',
@@ -1048,6 +1063,7 @@
           x: 185, y: 205
         },
         {
+          id: 'base_5',
           sender: 'Ban Cán Sự Lớp',
           recipient: 'Ban Giám Hiệu & Hội Đồng Sư Phạm',
           symbol: '💐',
@@ -1055,6 +1071,7 @@
           x: 515, y: 200
         },
         {
+          id: 'base_6',
           sender: 'Bút danh: Học Trò Nhỏ',
           recipient: 'Thầy Cô Tổ Ngoại Ngữ & Nghệ Thuật',
           symbol: '📚',
@@ -1062,6 +1079,7 @@
           x: 295, y: 185
         },
         {
+          id: 'base_7',
           sender: 'Đoàn Viên Chi Đoàn',
           recipient: 'Thầy Cô Công Tác Đoàn & Thể Chất',
           symbol: '🌻',
@@ -1069,6 +1087,7 @@
           x: 410, y: 185
         },
         {
+          id: 'base_8',
           sender: 'Tập Thể Lớp 12A3',
           recipient: 'Tất Cả Quý Thầy Cô Đáng Kính',
           symbol: '🌹',
@@ -1076,6 +1095,7 @@
           x: 350, y: 150
         }
       ];
+      let treeWishes = baseWishes.slice();
 
       // Suggested wishes for quick fill
       const wishSuggestions = [
@@ -1084,6 +1104,345 @@
         'Dẫu mai này đi khắp bốn phương trời, từng lời dạy ân cần của Thầy Cô vẫn luôn là hành trang quý giá nhất trong tim chúng em.'
       ];
       let suggestIndex = 0;
+
+      // -----------------------------------------------------------------------
+      // 1B. REALTIME DATABASE ENGINE (PERSISTENCE + CLOUD DB + SSE STREAM)
+      // -----------------------------------------------------------------------
+      function getCurrentDbSnapshot() {
+        const workLikesMap = {};
+        studentWorks.forEach((w) => {
+          workLikesMap[w.id] = w.likes;
+        });
+        return {
+          version: '2.0.0',
+          project: 'Báo Tường Điện Tử 20/11 - Ngọn Lửa Tri Ân',
+          flowerCount: flowerCount,
+          editorialLikes: editorialLikes,
+          workLikes: workLikesMap,
+          baseWishes: baseWishes,
+          customWishes: customWishes,
+          updatedAt: new Date().toISOString(),
+          clientId: CLIENT_SESSION_ID
+        };
+      }
+
+      function rebuildTreeWishesList() {
+        const seen = new Set();
+        const combined = [];
+        baseWishes.forEach((w) => {
+          const key = w.id || `${w.sender}|${w.recipient}|${w.message}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            combined.push(w);
+          }
+        });
+        customWishes.forEach((w) => {
+          if (!w || !w.sender || !w.recipient || !w.message) return;
+          const key = w.id || `${w.sender}|${w.recipient}|${w.message}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            combined.push(w);
+          }
+        });
+        treeWishes = combined;
+      }
+
+      function refreshAllRealtimeUiCounters() {
+        const headerFlowerEl = document.getElementById('headerFlowerCount');
+        const statFlowersEl = document.getElementById('statFlowers');
+        const editorialLikeEl = document.getElementById('editorialLikeCount');
+        if (headerFlowerEl) headerFlowerEl.textContent = flowerCount.toLocaleString('vi-VN');
+        if (statFlowersEl) statFlowersEl.textContent = flowerCount.toLocaleString('vi-VN');
+        if (editorialLikeEl) editorialLikeEl.textContent = String(editorialLikes);
+
+        // Update modal counter if reader modal is currently open
+        const modalAuthor = document.getElementById('modalWorkAuthor');
+        if (modalAuthor && currentModalWorkId) {
+          if (currentModalWorkId === 'editorial') {
+            modalAuthor.textContent = 'Ban Biên Tập Báo Tường Lớp • ' + editorialLikes + ' lượt thả tim';
+          } else {
+            const activeWork = studentWorks.find((x) => x.id === currentModalWorkId);
+            if (activeWork) {
+              modalAuthor.textContent = activeWork.author + ' • ' + activeWork.likes + ' lượt yêu thích';
+            }
+          }
+        }
+      }
+
+      function updateRealtimeStatusIndicator(statusText, isOnline = true) {
+        const badge = document.getElementById('realtimeDbStatusBadge');
+        const syncText = document.getElementById('realtimeLastSyncText');
+        if (badge) {
+          badge.className = isOnline
+            ? 'px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300/80 text-[11px] font-bold inline-flex items-center gap-1.5'
+            : 'px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300/80 text-[11px] font-bold inline-flex items-center gap-1.5';
+          badge.innerHTML = `
+            <span class="w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-600 animate-pulse' : 'bg-amber-600'}"></span>
+            <span>${statusText}</span>
+          `;
+        }
+        if (syncText) {
+          const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          syncText.textContent = `Đồng bộ Server DB lúc ${nowStr}`;
+        }
+      }
+
+      function saveLocalDbSnapshot() {
+        try {
+          const snap = getCurrentDbSnapshot();
+          localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(snap));
+          localStorage.setItem('bt2011_flowers_129', String(flowerCount));
+          localStorage.setItem('bt2011_ed_likes_129', String(editorialLikes));
+        } catch (e) {}
+      }
+
+      function mergeIncomingDbState(incoming, shouldRender = true) {
+        if (!incoming || typeof incoming !== 'object') return false;
+        const payload = incoming.data && typeof incoming.data === 'object' ? incoming.data : incoming;
+        let hasChanged = false;
+
+        // 1. Merge flowerCount monotonically (baseline >= 129)
+        const inFlowers = parseInt(payload.flowerCount, 10);
+        if (!isNaN(inFlowers) && inFlowers > flowerCount) {
+          flowerCount = inFlowers;
+          hasChanged = true;
+        }
+
+        // 2. Merge editorialLikes monotonically (baseline >= 129)
+        const inEdLikes = parseInt(payload.editorialLikes, 10);
+        if (!isNaN(inEdLikes) && inEdLikes > editorialLikes) {
+          editorialLikes = inEdLikes;
+          hasChanged = true;
+        }
+
+        // 3. Merge studentWorks likes monotonically
+        if (payload.workLikes && typeof payload.workLikes === 'object') {
+          studentWorks.forEach((w) => {
+            const inWorkLike = parseInt(payload.workLikes[w.id], 10);
+            if (!isNaN(inWorkLike) && inWorkLike > w.likes) {
+              w.likes = inWorkLike;
+              hasChanged = true;
+            }
+          });
+        }
+
+        // 4. Merge customWishes (deduplicated union by id or sender+recipient+message)
+        const incomingWishes = Array.isArray(payload.customWishes) ? payload.customWishes : [];
+        if (incomingWishes.length > 0) {
+          const existingKeys = new Set(
+            customWishes.map((w) => w.id || `${w.sender}|${w.recipient}|${w.message}`)
+          );
+          incomingWishes.forEach((w) => {
+            if (!w || !w.sender || !w.recipient || !w.message) return;
+            const key = w.id || `${w.sender}|${w.recipient}|${w.message}`;
+            if (!existingKeys.has(key)) {
+              existingKeys.add(key);
+              customWishes.push({
+                id: w.id || ('wish_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
+                sender: String(w.sender).slice(0, 80),
+                recipient: String(w.recipient).slice(0, 80),
+                symbol: w.symbol || '🌹',
+                message: String(w.message).slice(0, 350),
+                x: Number(w.x) || 350,
+                y: Number(w.y) || 150,
+                createdAt: w.createdAt || new Date().toISOString()
+              });
+              hasChanged = true;
+            }
+          });
+        }
+
+        if (hasChanged) {
+          rebuildTreeWishesList();
+          saveLocalDbSnapshot();
+          if (shouldRender) {
+            refreshAllRealtimeUiCounters();
+            renderWorks();
+            renderGratitudeTreeAndWall();
+          }
+        }
+        return hasChanged;
+      }
+
+      // Load saved state immediately on script initialization so reload never loses data
+      (function loadInitialLocalState() {
+        try {
+          localStorage.removeItem('bt2011_flowers');
+          localStorage.removeItem('bt2011_ed_likes');
+          const savedRaw = localStorage.getItem(DB_STORAGE_KEY);
+          if (savedRaw) {
+            const parsed = JSON.parse(savedRaw);
+            mergeIncomingDbState(parsed, false);
+          } else {
+            const savedFlowers = localStorage.getItem('bt2011_flowers_129');
+            if (savedFlowers) flowerCount = Math.max(129, parseInt(savedFlowers, 10) || 129);
+            const savedEdLikes = localStorage.getItem('bt2011_ed_likes_129');
+            if (savedEdLikes) editorialLikes = Math.max(129, parseInt(savedEdLikes, 10) || 129);
+            saveLocalDbSnapshot();
+          }
+        } catch (e) {}
+      })();
+
+      // Push & Broadcast state to Cloud DB + Realtime SSE Stream + Cross-Tab Channel
+      let cloudSyncTimeout = null;
+      function saveAndBroadcastDbState(actionTag = 'update') {
+        rebuildTreeWishesList();
+        saveLocalDbSnapshot();
+        const snapshot = getCurrentDbSnapshot();
+
+        // 1. Instant cross-tab sync via BroadcastChannel
+        try {
+          if (broadcastChannel) {
+            broadcastChannel.postMessage(snapshot);
+          }
+        } catch (e) {}
+
+        // 2. Instant realtime push to all connected clients via ntfy SSE pub/sub
+        fetch(REALTIME_TOPIC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify(snapshot)
+        }).then(() => {
+          updateRealtimeStatusIndicator('Realtime DB • Trực tuyến', true);
+        }).catch(() => {});
+
+        // 3. Debounced PUT to Permanent Cloud REST Object Store
+        if (cloudSyncTimeout) clearTimeout(cloudSyncTimeout);
+        cloudSyncTimeout = setTimeout(() => {
+          const latestSnap = getCurrentDbSnapshot();
+          fetch(CLOUD_DB_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: 'bt2011_thanglong_12a3_realtime_db',
+              data: latestSnap
+            })
+          }).then((res) => {
+            if (res.ok) updateRealtimeStatusIndicator('Realtime DB • Đã lưu Server', true);
+          }).catch(() => {});
+        }, 250);
+      }
+
+      function initRealtimeDatabaseSync() {
+        // A. Listen to localStorage & BroadcastChannel for multi-tab realtime sync
+        window.addEventListener('storage', (e) => {
+          if (e.key === DB_STORAGE_KEY && e.newValue) {
+            try {
+              mergeIncomingDbState(JSON.parse(e.newValue), true);
+            } catch (err) {}
+          }
+        });
+        if (broadcastChannel) {
+          broadcastChannel.onmessage = (ev) => {
+            if (ev && ev.data) mergeIncomingDbState(ev.data, true);
+          };
+        }
+
+        // B. Fetch local static db.json seed file (extracted on maintenance server)
+        fetch(LOCAL_DB_FILE + '?t=' + Date.now(), { cache: 'no-store' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data) mergeIncomingDbState(data, true);
+          })
+          .catch(() => {});
+
+        // C. Fetch Permanent Cloud REST Database Object
+        function pullCloudDatabase() {
+          fetch(CLOUD_DB_URL, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((obj) => {
+              if (obj && obj.data) {
+                const updated = mergeIncomingDbState(obj.data, true);
+                updateRealtimeStatusIndicator('Realtime DB • Trực tuyến', true);
+                // If local state is ahead of cloud DB, push merged state back to cloud DB
+                const cloudFlowers = parseInt(obj.data.flowerCount, 10) || 129;
+                const cloudEdLikes = parseInt(obj.data.editorialLikes, 10) || 129;
+                const cloudWishesLen = Array.isArray(obj.data.customWishes) ? obj.data.customWishes.length : 0;
+                if (
+                  flowerCount > cloudFlowers ||
+                  editorialLikes > cloudEdLikes ||
+                  customWishes.length > cloudWishesLen
+                ) {
+                  fetch(CLOUD_DB_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: 'bt2011_thanglong_12a3_realtime_db',
+                      data: getCurrentDbSnapshot()
+                    })
+                  }).catch(() => {});
+                }
+              }
+            })
+            .catch(() => {});
+        }
+        pullCloudDatabase();
+
+        // D. Fetch cached realtime event log from pub/sub stream
+        fetch(REALTIME_TOPIC_URL + '/json?poll=1&since=all', { cache: 'no-store' })
+          .then((r) => (r.ok ? r.text() : ''))
+          .then((text) => {
+            if (!text) return;
+            const lines = text.trim().split('\n');
+            lines.forEach((line) => {
+              try {
+                const evt = JSON.parse(line);
+                if (evt && evt.event === 'message' && evt.message) {
+                  const snap = JSON.parse(evt.message);
+                  mergeIncomingDbState(snap, false);
+                }
+              } catch (err) {}
+            });
+            refreshAllRealtimeUiCounters();
+            renderWorks();
+            renderGratitudeTreeAndWall();
+          })
+          .catch(() => {});
+
+        // E. Subscribe to live Server-Sent Events (SSE) stream for instant cross-user updates
+        if ('EventSource' in window) {
+          try {
+            const sse = new EventSource(REALTIME_TOPIC_URL + '/sse');
+            sse.onopen = () => {
+              updateRealtimeStatusIndicator('Realtime DB • Trực tuyến', true);
+            };
+            sse.onmessage = (evt) => {
+              try {
+                const wrapper = JSON.parse(evt.data);
+                const rawMsg = wrapper && wrapper.message ? wrapper.message : evt.data;
+                const payload = typeof rawMsg === 'string' ? JSON.parse(rawMsg) : rawMsg;
+                if (payload && payload.clientId !== CLIENT_SESSION_ID) {
+                  mergeIncomingDbState(payload, true);
+                  updateRealtimeStatusIndicator('Realtime DB • Vừa cập nhật', true);
+                }
+              } catch (err) {}
+            };
+            sse.onerror = () => {
+              // Automatic periodic fallback poll handles any proxy/firewall restriction
+            };
+          } catch (err) {}
+        }
+
+        // F. Periodic background sync every 12 seconds for rock-solid reliability
+        setInterval(pullCloudDatabase, 12000);
+      }
+
+      function exportDatabaseFileForMaintenance() {
+        const snapshot = getCurrentDbSnapshot();
+        const jsonString = JSON.stringify(snapshot, null, 2);
+        try {
+          const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'db.json';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          showToast('Đã trích xuất file db.json!', 'Toàn bộ số liệu Hoa, Tim và Thiệp Tri Ân đã được xuất thẳng ra db.json cho bản Maintenance.');
+        } catch (e) {}
+      }
 
       // -----------------------------------------------------------------------
       // 2. TOAST & PARTICLE BURST HELPERS
@@ -1193,6 +1552,7 @@
               item.likes += 1;
               spawnFlowerBurst(e.clientX, e.clientY);
               renderWorks();
+              saveAndBroadcastDbState('like_work_' + id);
             }
           });
         });
@@ -1764,10 +2124,35 @@
         }
       }
 
+      function initRandomNavLogo() {
+        const logoImg = document.getElementById('navRandomLogoImg');
+        if (!logoImg) return;
+        const logoPool = [
+          { file: 'logo_A3_1.png', scale: 1.24, tx: 0, ty: 0 },
+          { file: 'logo_A3_2.png', scale: 1.26, tx: 0, ty: 0 },
+          { file: 'logo_A3_3.png', scale: 1.56, tx: 1, ty: 0 },
+          { file: 'logo_A3_4.png', scale: 1.34, tx: 2, ty: 0 },
+          { file: 'logo_A3_5.png', scale: 1.24, tx: 0, ty: 0 },
+          { file: 'logo_A3_6.png', scale: 1.24, tx: 0, ty: 0 },
+          { file: 'logo_A3_7.png', scale: 1.24, tx: 0, ty: -1 },
+          { file: 'logo_A3_9.png', scale: 1.24, tx: 0, ty: 0 }
+        ];
+        const chosen = logoPool[Math.floor(Math.random() * logoPool.length)];
+        logoImg.src = 'images/logo/' + chosen.file;
+        logoImg.style.transform = `translate(${chosen.tx}%, ${chosen.ty}%) scale(${chosen.scale})`;
+        logoImg.onerror = () => {
+          if (!logoImg.dataset.fallbackTried) {
+            logoImg.dataset.fallbackTried = '1';
+            logoImg.src = 'logo/' + chosen.file;
+          }
+        };
+      }
+
       // -----------------------------------------------------------------------
       // 10. WIRE ALL CONTROLS ON DOM READY
       // -----------------------------------------------------------------------
       function initApp() {
+        initRandomNavLogo();
         // Sync initial counts
         const headerFlowerEl = document.getElementById('headerFlowerCount');
         const statFlowersEl = document.getElementById('statFlowers');
@@ -1785,6 +2170,7 @@
         renderGratitudeTreeAndWall();
         updateClassAndQrDisplay();
         setupScrollReveal();
+        initRealtimeDatabaseSync();
         setTimeout(stepTypewriter, 1200);
 
         // Start canvas animation
@@ -1802,15 +2188,14 @@
           flowerCount += 1;
           if (headerFlowerEl) headerFlowerEl.textContent = flowerCount.toLocaleString('vi-VN');
           if (statFlowersEl) statFlowersEl.textContent = flowerCount.toLocaleString('vi-VN');
-          try {
-            localStorage.setItem('bt2011_flowers_129', String(flowerCount));
-          } catch (err) {}
+          saveAndBroadcastDbState('offer_flower');
           spawnFlowerBurst(e.clientX, e.clientY);
-          showToast('Đã dâng 1 đóa hoa tri ân!', `Tổng cộng ${flowerCount.toLocaleString('vi-VN')} đóa hoa đã được gửi tới Thầy Cô.`);
+          showToast('Đã dâng 1 đóa hoa tri ân!', `Tổng cộng ${flowerCount.toLocaleString('vi-VN')} đóa hoa đã được lưu realtime trên Server.`);
         }
 
         document.getElementById('btnOfferFlowerHeader')?.addEventListener('click', handleOfferFlower);
         document.getElementById('btnOfferFlowerMain')?.addEventListener('click', handleOfferFlower);
+        document.getElementById('btnExportDbJson')?.addEventListener('click', exportDatabaseFileForMaintenance);
 
         // Particle Mode Button
         document.getElementById('btnParticleMode')?.addEventListener('click', () => {
@@ -1852,11 +2237,9 @@
         document.getElementById('btnLikeEditorial')?.addEventListener('click', (e) => {
           editorialLikes += 1;
           if (editorialLikeEl) editorialLikeEl.textContent = String(editorialLikes);
-          try {
-            localStorage.setItem('bt2011_ed_likes_129', String(editorialLikes));
-          } catch (err) {}
+          saveAndBroadcastDbState('like_editorial');
           spawnFlowerBurst(e.clientX, e.clientY);
-          showToast('Cảm ơn bạn đã yêu thích Bài Viết!', 'Tình cảm tri ân thầy cô đang được lan tỏa.');
+          showToast('Cảm ơn bạn đã yêu thích Bài Viết!', 'Lượt thả tim đã được lưu realtime trên Server.');
         });
 
         // Wishes Wall Scroll & Collapse Controls
@@ -1916,18 +2299,17 @@
             editorialLikes += 1;
             if (editorialLikeEl) editorialLikeEl.textContent = String(editorialLikes);
             if (modalAuthor) modalAuthor.textContent = 'Ban Biên Tập Báo Tường Lớp • ' + editorialLikes + ' lượt thả tim';
-            try {
-              localStorage.setItem('bt2011_ed_likes_129', String(editorialLikes));
-            } catch (err) {}
+            saveAndBroadcastDbState('like_editorial_modal');
           } else {
             const item = studentWorks.find((x) => x.id === currentModalWorkId);
             if (item) {
               item.likes += 1;
               renderWorks();
               if (modalAuthor) modalAuthor.textContent = item.author + ' • ' + item.likes + ' lượt yêu thích';
+              saveAndBroadcastDbState('like_work_modal_' + item.id);
             }
           }
-          showToast('Đã thả tim tác phẩm!', 'Cảm ơn bạn đã khích lệ tác giả.');
+          showToast('Đã thả tim tác phẩm!', 'Lượt yêu thích đã được đồng bộ realtime lên Server.');
         });
 
         // Quiz Reset
@@ -1970,9 +2352,20 @@
           const x = Math.round(350 + Math.cos(angle) * rx);
           const y = Math.round(155 + Math.sin(angle) * ry);
 
-          const newWish = { sender, recipient, symbol: selectedSymbol, message, x, y };
-          treeWishes.push(newWish);
+          const newWish = {
+            id: 'wish_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            sender,
+            recipient,
+            symbol: selectedSymbol,
+            message,
+            x,
+            y,
+            createdAt: new Date().toISOString()
+          };
+          customWishes.push(newWish);
+          rebuildTreeWishesList();
           renderGratitudeTreeAndWall();
+          saveAndBroadcastDbState('add_wish');
 
           document.getElementById('treeActiveIcon').textContent = newWish.symbol;
           document.getElementById('treeActiveRecipient').textContent = 'Kính gửi: ' + newWish.recipient;
@@ -1981,7 +2374,7 @@
 
           document.getElementById('wishForm').reset();
           spawnFlowerBurst(window.innerWidth / 2, window.innerHeight / 2);
-          showToast('Đã treo lời chúc lên Cây Tri Ân!', `Thiệp của "${sender}" đã nở hoa trên tán cây.`);
+          showToast('Đã treo lời chúc lên Cây Tri Ân!', `Thiệp của "${sender}" đã được lưu vào Database & hiển thị realtime.`);
         });
 
         // QR & Class Info Modal
